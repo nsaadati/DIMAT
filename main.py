@@ -1,3 +1,13 @@
+import argparse
+import json
+from Models.ResNet import ResNet
+import torch
+import sys
+from utils.weight_matching import find_permutation, apply_permutation, resnet20_permutation_spec, resnet50_permutation_spec, vgg16_permutation_spec
+from tqdm import tqdm
+import copy
+import matplotlib.pyplot as plt
+import torchvision
 import torchvision.transforms as T
 import torch.nn.functional as F
 import os
@@ -6,7 +16,6 @@ import ast
 import os
 import pdb
 import clip
-import copy
 import random
 from time import time
 import numpy as np
@@ -17,6 +26,7 @@ from itertools import product
 import argparse
 import pandas as pd
 import pickle
+from Models.ResNet import resnet20
 from train.train import train_model, test_accuracy
 from utils.AM import *
 from utils.model_merger import ModelMerge
@@ -25,9 +35,9 @@ from graphs.resnet_graph import resnet50 as resnet50_graph
 from graphs.vgg_graph import vgg16 as vgg16_graph
 from utils.matching_functions import match_tensors_zipit, match_tensors_optimal, match_tensors_permute, match_tensors_kmeans, match_tensors_randperm
 from utils.metric_calculators import CovarianceMetric, MeanMetric, Py_CovarianceMetric, CorrelationMetric, CossimMetric
-from utils.weight_matching import find_permutation, apply_permutation, resnet20_permutation_spec, resnet50_permutation_spec, vgg16_permutation_spec
 from torch.utils.data import SubsetRandomSampler
 from torch.utils.data import Subset
+from Models.vgg import vgg16
 from data.dataloader import get_partition_dataloader
 from data.dataset import Data_Loader
 from Models.LoadModel import load_model, load_models
@@ -50,16 +60,16 @@ parser.add_argument('--phase',type=str, default='finetune', choices=('pretrain',
 parser.add_argument("--zerotorandom", action="store_true", help="change zero value in covrinse dignoal to random valueclose to epsilun")
 parser.add_argument("--subdata", action="store_true", help="Calculate batch normalization for ZipIt using a subset of data")
 parser.add_argument("--numdata", type=int, default=1000, help="Number of data points to use in the subset")
-parser.add_argument('--optim', type=str, default='adam')
+parser.add_argument('--opt', type=str, default='adam')
 parser.add_argument('--num_classes', type=int, default=100, help='Number of the classes')
 parser.add_argument('--dataset', type=str, default='cifar100', choices=['cifar100', 'tinyimgnt', 'cifar10', 'mnist'])
 parser.add_argument('--match', type=str, default='permute', choices=['permute', 'kmeans', 'optimal', 'zipit', 'randperm'])
 parser.add_argument('--matrix', type=str, default='cov', choices=['pycov', 'corr', 'cov', 'cossi'])
 parser.add_argument('--imgntdir', type=str, default='data/tiny-imagenet-200', help="directory for tiny imagenet dataset")
-parser.add_argument('--opt', type=str, default='DIMAT', help='the algorithm to merge models',
+parser.add_argument('--matching_alg', type=str, default='DIMAT', help='the algorithm to merge models',
                    choices= ('WM', 'WA', 'DIMAT'))
 parser.add_argument('--width-multiplier', type=int, default=8)
-parser.add_argument('--model', type=str, default='resnet20', choices=['resnet20', 'resnet50', 'vgg16'],
+parser.add_argument('--arch', type=str, default='resnet20', choices=['resnet20', 'resnet50', 'vgg16'],
                     help="Specify the architecture for models. Default is 'resnet20'.")
 parser.add_argument('--seed', type=str, default='42',  help="Seed value for reproducibility")
 
@@ -95,7 +105,7 @@ def WA(models, cdict):
     for m_idx in range(len(models)):
         merged_models.append(copy.deepcopy(models[m_idx]))
         merged_models[m_idx].load_state_dict(merged_model_state_dicts[m_idx])
-    return merged_models                  
+    return merged_models                   
 
 def WM(models, cdict, perm_spec, device):
     merged_model_state_dicts = [init_model_state_dict(copy.deepcopy(models[0].state_dict())) for _ in range(len(models))]
@@ -129,7 +139,7 @@ def DIMAT(models, cdict, experiment, graph_func, device, num_classes, trainloade
     merged_models = []  
     for m_idx, model in enumerate(models):
         interp_w = []
-        print('Agent',m_idx)
+        print('m_idx',m_idx)
         neighbors = [i for i, val in enumerate(cdict['connectivity'][m_idx]) if val > 0]
         pi_m_idx = cdict['pi'][m_idx]
         merged_models.append(copy.deepcopy(models[m_idx]))
@@ -141,7 +151,7 @@ def DIMAT(models, cdict, experiment, graph_func, device, num_classes, trainloade
         for neighbor_id in neighbors:
             if neighbor_id == m_idx:
                 continue
-            print('Neighbor ID',neighbor_id)
+            print('neighbor_id',neighbor_id)
 
             models[neighbor_id] = reset_bn_stats(models[neighbor_id], trainloader)
             temp_models.append(copy.deepcopy(models[neighbor_id]))
@@ -173,12 +183,12 @@ def DIMAT(models, cdict, experiment, graph_func, device, num_classes, trainloade
     return merged_models
 
 
-def merge_models(models, cdict, opt, experiment, graph_func, device, num_classes, trainloader, testloader, match_func, metric_classes, perm_spec):
-    if opt == 'WA':
-        merged_models = WA(models, cdict)
-    elif opt == 'WM':
+def merge_models(models, cdict, matching_alg, experiment, graph_func, device, num_classes, trainloader, testloader, match_func, metric_classes, perm_spec):
+    if matching_alg == 'WA':
+        merged_models = WA(models, perm_spec)
+    elif matching_alg == 'WM':
         merged_models = WM(models, cdict, perm_spec, device)
-    elif opt == 'DIMAT':
+    elif matching_alg == 'DIMAT':
         merged_models = DIMAT(models, cdict, experiment, graph_func, device, num_classes, trainloader, testloader, match_func, metric_classes)
     return merged_models
 def train_models(merged_models, training, wsize, num_epochs, batch_size, datasetname, data_dist, device, optimizer, trainset, phase):
@@ -213,7 +223,7 @@ def save_model(model, path):
     except Exception as e:
         print(f"Error saving the model: {str(e)}")
 
-def calculate_accuracy_matrix(merged_models, testset, trainloader, batch_size, wsize, datasetname, data_dist, device, testloader, save_path_model, phase, exp, opt, mode):
+def calculate_accuracy_matrix(merged_models, testset, trainloader, batch_size, wsize, datasetname, data_dist, device, testloader, save_path_model, phase, exp, matching_alg, mode):
     accuracy_matrix = [[None] * wsize for _ in range(wsize)]
     all_classes_accuracy = []
     all_classes_loss = []
@@ -237,7 +247,7 @@ def calculate_accuracy_matrix(merged_models, testset, trainloader, batch_size, w
         all_classes_loss.append(loss)
         print("accuracy", all_classes_accuracy[rank])
 
-        if mode == "merging" and exp == 1 and (opt == "DIMAT" or opt == "consensus_averaging"):
+        if mode == "merging" and exp == 1 and (matching_alg == "DIMAT" or matching_alg == "consensus_averaging"):
             for j in range(1, wsize):
                 accuracy_matrix[j][:] = accuracy_matrix[0][:]
                 # print("accuracy_matrix[j][:]", accuracy_matrix[j][:])
@@ -265,7 +275,7 @@ if __name__ == "__main__":
     experiment = args.exp
     width_multiplier = args.width_multiplier
     checkpoint_folder = args.ckp
-    opt = args.opt
+    matching_alg = args.matching_alg
     save_folder = args.save_folder
     merg_itr = args.merg_itr
     data_dist = args.data_dist
@@ -273,14 +283,14 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     training = args.training
     merg_itr_init = args.merg_itr_init
-    optimizer = args.optim
+    optimizer = args.opt
     num_classes = args.num_classes
     datasetname = args.dataset
     match = args.match
     matrix = args.matrix 
     subdata = args.subdata
     numdata = args.numdata
-    arch = args.model
+    arch = args.arch
     randominit = args.randominit
     imgntdir = args.imgntdir
     diffinit = args.diffinit
@@ -306,25 +316,16 @@ if __name__ == "__main__":
         init_path = 'trianedinit'
 
 
-    opt_path = opt
+    matching_alg_path = matching_alg
 
     data_loader = Data_Loader(datasetname, batch_size, imgntdir)
     trainset, testset, trainloader, testloader, num_classes = data_loader.load_data()
             
-    architectures = {
-        'resnet50': (resnet50_graph, resnet50_permutation_spec),
-        'resnet20': (resnet20_graph, resnet20_permutation_spec),
-        'vgg16': (vgg16_graph, vgg16_permutation_spec)
-    }
-
-    if arch in architectures:
-        graph_func, perm_spec = architectures[arch]
-    else:
-        raise ValueError(f"Architecture '{arch}' is not supported.")
-
+    graph_func = f"{arch}_graph"
+    perm_spec = f"{arch}_permutation_spec"
  
 
-    if arch != "vgg16" and opt == "WM":
+    if arch != "vgg16" and matching_alg == "WM":
         print('Weight Matching is only available for VGG architecture.')
         sys.exit() 
         
@@ -348,11 +349,11 @@ if __name__ == "__main__":
         if merg_itr_init != 0:
             if training:
                 checkpoint_folder = os.path.join(save_folder, 'Models', init_path, datasetname, arch, training_path,'data_dist_%s' % (data_dist), 
-                                 'models_no%d' % wsize, '%s' % opt_path, 'graph_%d' % experiment, "trained", 'random_seed_%s' % (random_seed))
+                                 'models_no%d' % wsize, '%s' % matching_alg_path, 'graph_%d' % experiment, "trained", 'random_seed_%s' % (random_seed))
                 print('load models from the last itration')
             else:
                 checkpoint_folder = os.path.join(save_folder, 'Models', init_path, datasetname, arch, training_path,'data_dist_%s' % (data_dist), 
-                                 'models_no%d' % wsize, '%s' % opt_path, 'graph_%d' % experiment, "merged", 'random_seed_%s' % (random_seed))
+                                 'models_no%d' % wsize, '%s' % matching_alg_path, 'graph_%d' % experiment, "merged", 'random_seed_%s' % (random_seed))
             models = load_models(arch, num_classes, datasetname, width_multiplier, device, wsize, checkpoint_folder)
             merg_itr_init = 0
         elif merg_i >= 1:
@@ -368,11 +369,11 @@ if __name__ == "__main__":
         
         # Create save path
         save_path = os.path.join(save_folder, 'Accuracy_Matrix', init_path, datasetname, arch, training_path,'data_dist_%s' % (data_dist), 
-                                 'models_no%d' % wsize, '%s' % opt_path, 'graph_%d' % experiment, 'merg_itr_%d' % (merg_i + 1), 'random_seed_%s' % (random_seed))
+                                 'models_no%d' % wsize, '%s' % matching_alg_path, 'graph_%d' % experiment, 'merg_itr_%d' % (merg_i + 1), 'random_seed_%s' % (random_seed))
         save_path_merged_model = os.path.join(save_folder, 'Models', init_path, datasetname, arch, training_path,'data_dist_%s' % (data_dist), 
-                                 'models_no%d' % wsize, '%s' % opt_path, 'graph_%d' % experiment, "merged", 'random_seed_%s' % (random_seed))
+                                 'models_no%d' % wsize, '%s' % matching_alg_path, 'graph_%d' % experiment, "merged", 'random_seed_%s' % (random_seed))
         save_path_trained_model = os.path.join(save_folder, 'Models', init_path, datasetname, arch, training_path,'data_dist_%s' % (data_dist), 
-                                 'models_no%d' % wsize, '%s' % opt_path, 'graph_%d' % experiment, "trained", 'random_seed_%s' % (random_seed))
+                                 'models_no%d' % wsize, '%s' % matching_alg_path, 'graph_%d' % experiment, "trained", 'random_seed_%s' % (random_seed))
         
         
         if not os.path.exists(save_path):
@@ -390,7 +391,7 @@ if __name__ == "__main__":
         
         
         # Merge models
-        merged_models = merge_models(models, cdict, opt, experiment, graph_func, device, num_classes, trainloader, testloader, match_func, metric_classes, perm_spec)
+        merged_models = merge_models(models, cdict, matching_alg, experiment, graph_func, device, num_classes, trainloader, testloader, match_func, metric_classes, perm_spec)
 
         # merged_models = models
         
@@ -398,7 +399,7 @@ if __name__ == "__main__":
         # Calculate accuracy matrix
         mode='Merging'
         accuracy_matrix, all_classes_accuracy, all_classes_loss = calculate_accuracy_matrix(merged_models, testset, trainloader, batch_size, wsize, 
-                                                                                            datasetname, data_dist, device, testloader, save_path_merged_model, phase, experiment, opt, mode)
+                                                                                            datasetname, data_dist, device, testloader, save_path_merged_model, phase, experiment, matching_alg, mode)
 
         # Write accuracy matrix to CSV
         output_file_testing = os.path.join(save_path, 'accuracy_matrix.csv')
@@ -416,7 +417,7 @@ if __name__ == "__main__":
                                                                                                  wsize,
                                                                                                  datasetname,
                                                                                                  data_dist,
-                                                                                                 device, testloader, save_path_trained_model, phase, experiment, opt, mode)
+                                                                                                 device, testloader, save_path_trained_model, phase, experiment, matching_alg, mode)
             write_accuracy_matrix_to_csv(output_file_training, accuracy_matrix, all_classes_accuracy,
                                          all_classes_loss)
             
