@@ -1,3 +1,3 @@
-data/cifar-100-python.tar.gz
-data/cifar-100-python/train
-data/cifar-10-python.tar.gz
+data/MNIST/
+data/cifar-10-batches-py/
+data/cifar-100-python/
