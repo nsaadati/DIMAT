@@ -41,7 +41,7 @@ class CovarianceMetric(MetricCalculator):
         self.outer += outer * batch_size
         self.std   += std   * batch_size
     
-    def finalize(self, numel, node, eps=1e-4):
+    def finalize(self, numel, covsave_path, node, eps=1e-4):
         self.outer /= numel
         self.mean  /= numel
         self.std   /= numel
@@ -53,6 +53,21 @@ class CovarianceMetric(MetricCalculator):
             print(cov)
             
             pdb.set_trace()
+        # Check if the output file already exists
+        # Check if the specified directory exists, and create it if not
+        """output_directory=covsave_path
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+        # Construct the full path for the output file
+
+        output_file = os.path.join(output_directory, f"covariance_{node}.csv")
+        
+        # Write the covariance matrix to the output file
+        with open(output_file, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in cov.tolist():
+                writer.writerow(row)"""
         return cov
 
 class Py_CovarianceMetric(MetricCalculator):
@@ -70,7 +85,7 @@ class Py_CovarianceMetric(MetricCalculator):
         #else:
             #self.feats = torch.cat([self.feats, feats], dim=1)
     
-    def finalize(self, numel, node, eps=1e-4):
+    def finalize(self, numel, covsave_path, node, eps=1e-4):
         # Transpose feats for torch.cov
         feats_transposed = self.feats.T
 
@@ -114,7 +129,7 @@ class CorrelationMetric(MetricCalculator):
         self.mean  += mean  * dx
         self.outer += outer * dx
     
-    def finalize(self, node, eps=1e-4):
+    def finalize(self, covsave_path, node, eps=1e-4):
         corr = self.outer - torch.outer(self.mean, self.mean)
         corr /= (torch.outer(self.std, self.std) + eps)
         return corr
@@ -140,7 +155,7 @@ class CossimMetric(MetricCalculator):
             
         self.outer += outer * dx
     
-    def finalize(self, node, eps=1e-4):
+    def finalize(self, covsave_path, node, eps=1e-4):
         return self.outer
 
 
@@ -157,7 +172,7 @@ class MeanMetric(MetricCalculator):
             self.mean = torch.zeros_like(mean)
         self.mean  += mean  * batch_size
     
-    def finalize(self, numel, node, eps=1e-4):
+    def finalize(self, numel, covsave_path, node, eps=1e-4):
         return self.mean / numel
         
 

@@ -16,13 +16,30 @@ def remove_col(x, idx):
     return torch.cat([x[:, :idx], x[:, idx+1:]], dim=-1)
 
 def compute_correlation(covariance, corrsave_path, node, eps=1e-7):
+    """zero_indices = torch.where(torch.diagonal(covariance) == 0)
 
-     
+    if zero_indices[0].shape[0] > 0:
+        print()
+        print()
+        print("Warning: Zero values found in the diagonal of the covariance matrix.")
+        print()
+        print()""" 
     std = torch.diagonal(covariance).sqrt()
     covariance = covariance / (torch.clamp(torch.outer(std, std), min=eps))
     # Check if the specified directory exists, and create it if not
     output_directory=corrsave_path
+    """if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
 
+    # Construct the full path for the output file
+
+    output_file = os.path.join(output_directory, f"correlation_{node}.csv")
+
+    # Write the covariance matrix to the output file
+    with open(output_file, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        for row in covariance.tolist():
+            writer.writerow(row)"""
     return covariance
 
 def add_bias_to_mats(mats):

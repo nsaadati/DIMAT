@@ -10,7 +10,7 @@ from utils.metric_calculators import CovarianceMetric, MeanMetric, Py_Covariance
 from utils.matching_functions import match_tensors_zipit, match_tensors_optimal, match_tensors_permute, match_tensors_kmeans, match_tensors_randperm
 from time import time
 from tqdm.auto import tqdm
-from utils.AM import get_merging_fn
+from utils.zipit_utils import get_merging_fn
 
 
 class MergeHandler:
@@ -233,7 +233,7 @@ class ModelMerge(nn.Module):
             graph.add_hooks(device=device)
 
 
-    def compute_metrics(self, dataloader, metric_classes):
+    def compute_metrics(self, dataloader, metric_classes, covsave_path):
         """
         Compute pairwise alignment metrics between all graph models (self inclusive).
         - dataloader: pytorch dataloader. Dataset (or list of datasets) over which to compute metrics
@@ -269,7 +269,7 @@ class ModelMerge(nn.Module):
         
         for node, node_metrics in self.metrics.items():
             for metric_name, metric in node_metrics.items():
-                self.metrics[node][metric_name] = metric.finalize(numel, node)
+                self.metrics[node][metric_name] = metric.finalize(numel, covsave_path, node)
 
         return self.metrics
     
@@ -459,6 +459,7 @@ class ModelMerge(nn.Module):
             
     def transform(self, model,
                   dataloader,
+                  covsave_path,
                   corrsave_path,
                   metric_classes=(CovarianceMetric, MeanMetric),
                   transform_fn=match_tensors_zipit,
@@ -481,7 +482,7 @@ class ModelMerge(nn.Module):
         self.transform_fn = transform_fn
         self.prune_threshold = prune_threshold
         
-        self.compute_metrics(dataloader, metric_classes=metric_classes)
+        self.compute_metrics(dataloader, metric_classes=metric_classes, covsave_path = covsave_path)
         self.compute_transformations(transform_fn,
                                     corrsave_path = corrsave_path,
                                     reduce_ratio=1 - 1. / len(self.graphs),

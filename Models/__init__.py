@@ -1,2 +1,4 @@
+from .preresnet import *
 from .vgg import *
-from .ResNet import *
+from .wide_resnet import *
+from .resnetzip import *

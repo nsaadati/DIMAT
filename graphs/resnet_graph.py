@@ -115,8 +115,8 @@ if __name__ == '__main__':
     import torchvision.models.resnet as resnet
     import models.resnets as resnet2
 
-    from utils.model_merger import ModelMerge
-    from utils.matching_functions import match_tensors_identity, match_tensors_zipit
+    from model_merger import ModelMerge
+    from projects.pub_code.DIMAT.utils.matching_functions import match_tensors_identity, match_tensors_zipit
     from copy import deepcopy
 
     data_x = torch.rand(4, 3, 224, 224)

@@ -48,8 +48,8 @@ if __name__ == '__main__':
     from models.vgg import vgg11 as vgg11_model, vgg16 as vgg16_model
     
 
-    from utils.model_merger import ModelMerge
-    from utils.matching_functions import match_tensors_identity, match_tensors_zipit
+    from model_merger import ModelMerge
+    from projects.pub_code.DIMAT.utils.matching_functions import match_tensors_identity, match_tensors_zipit
     from copy import deepcopy
 
     data_x = torch.rand(4, 3, 32, 32)

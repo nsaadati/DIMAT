@@ -2,8 +2,8 @@ import os
 import numpy as np
 import utils
 import models
-import data.dataset as data
-from utils.federated import Federated
+import data
+from federated import Federated
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F

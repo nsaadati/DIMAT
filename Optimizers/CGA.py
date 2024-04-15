@@ -5,7 +5,9 @@ from copy import deepcopy
 from copy import copy
 from collections import defaultdict
 import numpy as np
-import quadprog
+import cvxopt
+
+#import quadprog
 # from Optimizers.SGA import ProjSGA, gradavg
 
 '''
@@ -148,7 +150,14 @@ class CGA(Optimizer):
 		G = np.eye(t)
 		h = np.zeros(t) + self.margin
 		try:
-			v = quadprog.solve_qp(p, q, G,h)[0]
+			P = cvxopt.matrix(P)
+			q = cvxopt.matrix(q)
+			G = cvxopt.matrix(G)
+			h = cvxopt.matrix(h)
+
+			# Solve the quadratic program
+			v = cvxopt.solvers.qp(P, q, G, h)['x']
+			# v = quadprog.solve_qp(p, q, G,h)[0]
 			self.old_v[model_layer] = v
 		except ValueError:
 			except_triggered = True
