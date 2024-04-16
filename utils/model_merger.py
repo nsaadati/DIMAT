@@ -10,7 +10,7 @@ from utils.metric_calculators import CovarianceMetric, MeanMetric, Py_Covariance
 from utils.matching_functions import match_tensors_zipit, match_tensors_optimal, match_tensors_permute, match_tensors_kmeans, match_tensors_randperm
 from time import time
 from tqdm.auto import tqdm
-from utils.zipit_utils import get_merging_fn
+from utils.am_utils import get_merging_fn
 
 
 class MergeHandler:

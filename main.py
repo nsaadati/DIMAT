@@ -27,7 +27,7 @@ import pandas as pd
 import pickle
 from Models.resnetzip import resnet20
 from train import train_model, test_accuracy
-from utils.zipit_utils import *
+from utils.am_utils import *
 from utils.model_merger import ModelMerge
 from graphs.resnet_graph import resnet20 as resnet20_graph
 from graphs.resnet_graph import resnet50 as resnet50_graph
@@ -101,7 +101,7 @@ def WA(models, cdict):
 
 def WM(models, cdict, perm_spec, device):
     merged_model_state_dicts = [init_model_state_dict(copy.deepcopy(models[0].state_dict())) for _ in range(len(models))]
-    model_state_dicts = [model.state_dict() for agent in models]
+    # model_state_dicts = [agent.state_dict() for agent in models]
     for m_idx, agent in enumerate(models):
         neighbors = [i for i, val in enumerate(cdict['connectivity'][m_idx]) if val > 0]
         pi_m_idx = cdict['pi'][m_idx]
