@@ -31,7 +31,7 @@ diffinits=('False')
 random_seeds=(0 1 2 3 4)
 exps=(1)
 # New arguments for main.py
-num_epochs=(2, 5, 10, 20)
+epochs=(2, 5, 10, 20)
 merg_itrs=(100)
 opts=("DIMAT" "WA")
 merg_itr_inits=(0)
@@ -71,8 +71,8 @@ while [[ $# -gt 0 ]]; do
             num_parallel=$2
             shift 2
             ;;
-        --nums_epochs)
-            nums_epochs=($2)
+        --epochs)
+            epochs=($2)
             shift 2
             ;;
         --merg_itrs)
@@ -117,7 +117,7 @@ echo "data_dist: ${data_dists[@]}"
 echo "datasets_nums_classes: ${datasets_nums_classes[@]}"
 echo "model: ${models[@]}"
 echo "random_seed: ${random_seeds[@]}"
-echo "num_epochs: ${nums_epochs[@]}"
+echo "epochs: ${epochs[@]}"
 echo "merg_itr: ${merg_itrs[@]}"
 echo "merg_itr_inits: ${merg_itr_inits[@]}"
 echo "randominit: ${randominits[@]}"
@@ -139,25 +139,25 @@ for dataset_num_classes in "${datasets_nums_classes[@]}"; do
          for randominit in "${randominits[@]}"; do
          for diffinit in "${diffinits[@]}"; do
         # Main.py arugments
-          for num_epochs in "${nums_epochs[@]}"; do
+          for epoch in "${epochs[@]}"; do
             for merge_itr in "${merg_itrs[@]}"; do 
             for merg_itr_init in "${merg_itr_inits[@]}"; do
              for exp in "${exps[@]}"; do
                for opt in "${opts[@]}"; do
                  for random_seed in "${random_seeds[@]}"; do
                   # Save console otuputs to text files since they will not be displayed otherwise - can check progress by opening the file at the printed path
-                  output_filename="runs/main/main_${dataset}_${model}_num_models_${num_models}_${data_dist}_${opt}_${merge_itr}_${merg_itr_init}_num_epochs_${num_epochs}_randominit${randominit}_diffinit${diffinit}_exp_${exp}_${random_seed}.txt"
+                  output_filename="runs/main/main_${dataset}_${model}_num_models_${num_models}_${data_dist}_${opt}_${merge_itr}_${merg_itr_init}_num_epochs_${epoch}_randominit${randominit}_diffinit${diffinit}_exp_${exp}_${random_seed}.txt"
 
                   # Get checkpoint path given current arguments
                   checkpoint="checkpoint/$dataset/$model/diff_initialization/models_no$num_models/data_dist_$data_dist/num_epochs_100/random_seed_0"
 
                   # Print current command
-                  echo "python -u -m main --dataset=${dataset} --model=${model} --num_models=${num_models} --ckp=${checkpoint} --opt=${opt} --merg_itr=${merge_itr} --merg_itr_init=${merg_itr_init} --training --randominit=${randominit} --diffinit=${diffinit} --num_epochs=${num_epochs} --exp=${exp} --seed=${random_seed} > ${output_filename}"
+                  echo "python -u -m main --dataset=${dataset} --model=${model} --num_models=${num_models} --ckp=${checkpoint} --opt=${opt} --merg_itr=${merge_itr} --merg_itr_init=${merg_itr_init} --training --randominit=${randominit} --diffinit=${diffinit} --epochs=${epoch} --exp=${exp} --seed=${random_seed} > ${output_filename}"
 
                   # Add " --run_python true " to the command after checking the printed experiment list
                   if [ "$run_python" = true ]; then
                     # Run the Python script with the specified arguments
-                    python -m main --dataset="$dataset" --model="$model"  --num_models="$num_models" --ckp="$checkpoint" --opt="$opt" --merg_itr="$merge_itr" --merg_itr_init="$merg_itr_init" --training --randominit="$randominit" --diffinit="$diffinit" --num_epochs="$num_epochs"  --exp="$exp" --seed="$random_seed" 2>&1 | tee "$output_filename" &
+                    python -m main --dataset="$dataset" --model="$model"  --num_models="$num_models" --ckp="$checkpoint" --opt="$opt" --merg_itr="$merge_itr" --merg_itr_init="$merg_itr_init" --training --randominit="$randominit" --diffinit="$diffinit" --epochs="$epoch"  --exp="$exp" --seed="$random_seed" 2>&1 | tee "$output_filename" &
                   fi
 
                   # Increment the parallel scripts counter

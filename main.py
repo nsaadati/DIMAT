@@ -46,7 +46,7 @@ parser = argparse.ArgumentParser(description='Load models and calculate merged m
 parser.add_argument('--num_models', type=int, default=5, help='Number of agents')
 parser.add_argument('--exp', type=int, default=1, help='graph indicator')
 parser.add_argument('--data_dist', type=str, default='non-iid', choices=['iid', 'non-iid', 'non-iid-PF'], help='Degree of nonidness')
-parser.add_argument('--num_epochs', type=int, default=2, help='Number of epochs for training')
+parser.add_argument('--epochs', type=int, default=2, help='Number of epochs for training')
 parser.add_argument('--merg_itr', type=int, default=1, help='the iteration number for merging')
 parser.add_argument('--merg_itr_init', type=int, default=0, help='the iteration number that strats with')
 parser.add_argument('--ckp', type=str, help='Path to the models checkpoint')
@@ -188,12 +188,12 @@ def merge_models(models, cdict, opt, experiment, graph_func, device, num_classes
     elif opt == 'DIMAT':
         merged_models = DIMAT(models, cdict, experiment, graph_func, device, num_classes, trainloader, testloader, covsave_path, corrsave_path)
     return merged_models
-def train_models(merged_models, training, num_models, num_epochs, batch_size, datasetname, data_dist, device, optimizer, trainset, phase):
+def train_models(merged_models, training, num_models, epochs, batch_size, datasetname, data_dist, device, optimizer, trainset, phase):
     if not training:
         return                        
     for model_id, agent in enumerate(merged_models):
         model_trainloader = get_partition_dataloader(trainset, data_dist, batch_size, num_models, datasetname, model_id, phase)
-        train_model(agent, num_epochs, train_loader=model_trainloader, device=device, optimizer_type=optimizer, softmax=True)
+        train_model(agent, epochs, train_loader=model_trainloader, device=device, optimizer_type=optimizer, softmax=True)
         
 
 def write_accuracy_matrix_to_csv(output_file, accuracy_matrix, all_classes_accuracy, all_classes_loss):
@@ -280,7 +280,7 @@ if __name__ == "__main__":
     merg_itr = args.merg_itr
     #csv_file = args.csv
     data_dist = args.data_dist
-    num_epochs = args.num_epochs
+    epochs = args.epochs
     batch_size = args.batch_size
     training = args.training
     merg_itr_init = args.merg_itr_init
@@ -333,7 +333,7 @@ if __name__ == "__main__":
         print("merg_i", merg_i)
         print("merg_itr", merg_itr)
         # Determine training path
-        training_path = f"with_training_epo{num_epochs}" if training else 'no_training'
+        training_path = f"with_training_epo{epochs}" if training else 'no_training'
         if merg_itr_init != 0:
             if training:
                 checkpoint_folder = os.path.join(save_folder, 'Models', init_path, datasetname, model, training_path,'data_dist_%s' % (data_dist), 
@@ -403,7 +403,7 @@ if __name__ == "__main__":
         # Train the models in the training copy and write the accuracy matrix to CSV
         if training and ((merg_i < merg_itr - 1) or merg_i == 0):
             print("training")
-            train_models(merged_models, training, num_models, num_epochs, batch_size, 
+            train_models(merged_models, training, num_models, epochs, batch_size, 
                          datasetname, data_dist, device, optimizer, trainset, phase)
             output_file_training = os.path.join(save_path, 'accuracy_matrix_training.csv')
             mode='training'

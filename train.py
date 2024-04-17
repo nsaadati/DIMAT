@@ -33,7 +33,7 @@ def seed_everything(random_seed):
     torch.cuda.manual_seed_all(random_seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-def train_model(model, num_epochs, train_loader, device, optimizer_type, softmax=False):
+def train_model(model, epochs, train_loader, device, optimizer_type, softmax=False):
     model.train()
 
     if optimizer_type == 'adam':
@@ -43,7 +43,7 @@ def train_model(model, num_epochs, train_loader, device, optimizer_type, softmax
     else:
         raise ValueError("Unsupported optimizer type")
 
-    for epoch in range(num_epochs):  # Adjust the number of epochs as needed
+    for epoch in range(epochs):  # Adjust the number of epochs as needed
         running_loss = 0.0
         for batch_idx, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
@@ -91,16 +91,16 @@ if __name__ == "__main__":
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Train multiple models on CIFAR-100')
     parser.add_argument('--phase',type=str, default='pretrain', choices=('pretrain', 'finetune'), help='Define the data distribution')
-    parser.add_argument('--num_models', type=int, default=10, help='Number of models to train')
+    parser.add_argument('--num_models', type=int, default=5, help='Number of models to train')
     parser.add_argument('--data_dist', type=str, default='non-iid', choices=['iid', 'non-iid', 'non-iid-PF'], help='Degree of nonidness')
     parser.add_argument('--num_classes', type=int, default=100, help='Number of all the classes')
     parser.add_argument('--random_seed', type=int, default=42, help='Random seed for reproducibility')
     parser.add_argument('--init_seed', type=bool, default=False, help='use initialization seed for training')
-    parser.add_argument('--num_epochs', type=int, default=100, help='Number of epochs for training')
+    parser.add_argument('--epochs', type=int, default=100, help='Number of epochs for training')
     parser.add_argument('--depth', type=int, default=22)
     parser.add_argument('--batch_size', type=int, default=100)
     parser.add_argument('--opt', type=str, default='adam')
-    parser.add_argument('--arch', type=str, default='resnet20', choices=['resnet20', 'resnet50', 'vgg16'],
+    parser.add_argument('--model', type=str, default='resnet20', choices=['resnet20', 'resnet50', 'vgg16'],
                         help="Specify the architecture for models. Default is 'resnet20'.")
     parser.add_argument('--dataset', type=str, default='cifar100', choices=['cifar100', 'tinyimgnt', 'cifar10', 'mnist'])
     parser.add_argument('--imgntdir', type=str, default='tiny-imagenet-200', help="directory for tiny imagenet dataset")
@@ -120,13 +120,13 @@ if __name__ == "__main__":
     num_models = args.num_models
     num_classes = args.num_classes
     init_seed_flag = args.init_seed
-    num_epochs = args.num_epochs
+    epochs = args.epochs
     depth = args.depth
     batch_size = args.batch_size
     optimizer = args.opt
     width_multiplier = args.width_multiplier
     save_folder = args.save_folder
-    arch = args.arch
+    arch = args.model
     datasetname = args.dataset
     imgntdir = args.imgntdir
     phase = args.phase
@@ -169,7 +169,7 @@ if __name__ == "__main__":
             model = load_model(arch, num_classes, datasetname, width_multiplier, device, seed, diffinit, path = None)
             agent_train_loader = get_partition_dataloader(trainset, data_dist, batch_size, num_models, datasetname, i, phase)
             # Train the model
-            train_accuracy, tloss = train_model(model, num_epochs, train_loader = agent_train_loader, device=device, optimizer_type=optimizer, softmax=True)
+            train_accuracy, tloss = train_model(model, epochs, train_loader = agent_train_loader, device=device, optimizer_type=optimizer, softmax=True)
             
                 # Create a new DataLoader for the filtered dataset
             ctestloader = get_partition_dataloader(testset, data_dist, batch_size, num_models, datasetname, i, phase)
@@ -180,7 +180,7 @@ if __name__ == "__main__":
             atest_accuracy, atloss = test_accuracy(model, testloader, device)
             atrain_accuracy, aloss = test_accuracy(model, trainloader, device)
             # Save the trained model
-            save_path = os.path.join(save_folder, datasetname, arch, initialization, 'models_no%d' % num_models, 'data_dist_%s' % (data_dist), 'num_epochs_%d' % (num_epochs), 'random_seed_%s' % (random_seed))
+            save_path = os.path.join(save_folder, datasetname, arch, initialization, 'models_no%d' % num_models, 'data_dist_%s' % (data_dist), 'num_epochs_%d' % (epochs), 'random_seed_%s' % (random_seed))
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
             model_path = os.path.join(save_path, f'model_{i}.pth')

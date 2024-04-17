@@ -1,18 +1,19 @@
 import os
 import utils
 import models
-import data.data as data
+import data
 import json
-from utils.collaborative import Collab
-from find_dom_set import *
+from collaborative import Collab
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
 import argparse
 import numpy as np
 import time
-from data.dataset import Data_Loader
-from data.dataloader import get_partition_dataloader
+from data import Data_Loader
+from dataloader import get_partition_dataloader
+import csv
+import subprocess
 
 def seed_everything(random_seed, myrank):
     random.seed(random_seed)
@@ -202,7 +203,42 @@ if __name__ == '__main__':
     model, opt, criterion, LR_scheduler = models.LoadModel(data_dim, **argdict) # workers and servers all have a model! ## the model, optimizer, and loss are same for all of them.
     dist.barrier()
     trainer = Collab(dataloader, testdataloader, model, opt, criterion, LR_scheduler, **argdict)
+    start_time = time.time()  # Record the start time
+    print("here")
     trainer.train()
+    end_time = time.time()  # Record the end time
+    elapsed_time = end_time - start_time
+    print(f"Elapsed Time: {elapsed_time} seconds")
+    gpu_properties = torch.cuda.get_device_properties(0)
+    total_memory = gpu_properties.total_memory
+    memory_reserved = torch.cuda.memory_reserved(0)
+    memory_allocated = torch.cuda.memory_allocated(0)
+    gpuinfo = torch.cuda.mem_get_info()
+
+    # Calculate GPU memory usage in GB
+    total_memory_gb = total_memory / (1024 ** 3)  # Convert bytes to gigabytes
+    memory_reserved_gb = memory_reserved / (1024 ** 3)  # Convert bytes to gigabytes
+    memory_allocated_gb = memory_allocated / (1024 ** 3)  # Convert bytes to gigabytes
+    gpu_memory_usage = torch.cuda.memory_allocated() / 1024**3  # Convert bytes to gigabytes
+
+    
+    print("GPU Information:")
+    print("Total Memory: {:.2f} GB".format(total_memory_gb))
+    print("Memory Reserved: {:.2f} GB".format(memory_reserved_gb))
+    print("Memory Allocated: {:.2f} GB".format(memory_allocated_gb))
+    print("GPU Memory Usage: {:.2f} GB".format(gpu_memory_usage))
+    # Save elapsed time to a CSV file
+    csv_filename = os.path.join(folder_name,'time_results.csv')
+    csv_header = ['Rank', 'Elapsed Time (s)', 'GPU Memory Usage (GB)', 'opt', 'gpuinfo', 'Total Memory (GB)', 'Memory Reserved (GB)', 'Memory Allocated (GB)']
+    csv_row = [rank, elapsed_time, gpu_memory_usage, opt, gpuinfo, total_memory_gb, memory_reserved_gb, memory_allocated_gb]
+
+
+    with open(csv_filename, mode='a') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        # Check if it's the first row to write the header
+        if csv_file.tell() == 0:
+            csv_writer.writerow(csv_header)
+        csv_writer.writerow(csv_row)
 
 #### Command to run the code for DSMA:
 

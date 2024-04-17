@@ -20,15 +20,15 @@ run_python=false
 # =====================================================================================================================================================================
 # Arguments - Modify for desired experiments or use command-line arugments! 
 # Commands should be of the following format:
-# ./train.sh --nums_models "2 5 10 20" --data_dists "iid non-iid" --datasets_nums_classes "cifar100,100" --archs "resnet20" --random_seeds "0 1 2 3 4" --num_parallel 2
+# ./train.sh --nums_models "2 5 10 20" --data_dists "iid non-iid" --datasets_nums_classes "cifar100,100" --models "resnet20" --random_seeds "0 1 2 3 4" --num_parallel 2
 # =====================================================================================================================================================================
 # All combinations
 nums_models=(2 5 10 20)
 data_dists=("iid" "non-iid" "non-iid-PF")
 datasets_nums_classes=("cifar100,100" "tinyimgnt,200" "cifar10,10")
-archs=('resnet20' 'resnet50' 'vgg16')
+models=('resnet20' 'resnet50' 'vgg16')
 random_seeds=(0 1 2 3 4)
-num_epochs=(100)
+epochs=(100)
 
 # If hardware allows, run multiple scripts in parallel (1 does a single script at a time)
 # Each instance of the script can use up to around 3 GB of GPU Memory (check GPU with nvidia-smi)
@@ -52,16 +52,16 @@ while [[ $# -gt 0 ]]; do
             datasets_nums_classes=($2)
             shift 2
             ;;
-        --archs)
-            archs=($2)
+        --models)
+            models=($2)
             shift 2
             ;;
         --random_seeds)
             random_seeds=($2)
             shift 2
             ;;
-        --num_epochs)
-            num_epochs=$2
+        --epochs)
+            epochs=$2
             shift 2
             ;;
         --num_parallel)
@@ -84,8 +84,8 @@ echo "Input Arguments:"
 echo "num_models: ${nums_models[@]}"
 echo "data_dist: ${data_dists[@]}"
 echo "datasets_nums_classes: ${datasets_nums_classes[@]}"
-echo "arch: ${archs[@]}"
-echo "num_epochs: ${num_epochs[@]}"
+echo "model: ${models[@]}"
+echo "epochs: ${epochs[@]}"
 echo "random_seed: ${random_seeds[@]}"
 echo "num_parallel: $num_parallel"
 
@@ -94,22 +94,22 @@ for dataset_num_classes in "${datasets_nums_classes[@]}"; do
   # Separate the dataset and num_classes pair
   IFS=',' read -r dataset num_classes <<< "$dataset_num_classes"
 
-  for arch in "${archs[@]}"; do
+  for model in "${models[@]}"; do
     for num_models in "${nums_models[@]}"; do
       # Filter out values in nums_models that are not a factor of (but not equal to) the number of classes
       #if [ $((num_classes % num_models)) -eq 0 ] && [ "$num_classes" -ne "$num_models" ]; then 
         for data_dist in "${data_dists[@]}"; do
           for random_seed in "${random_seeds[@]}"; do
             # Save console otuputs to text files since they will not be displayed otherwise - can check progress by opening the file at the printed path
-            output_filename="runs/train/train_${dataset}_${arch}_num_models_${num_models}_${data_dist}_${random_seed}.txt"
+            output_filename="runs/train/train_${dataset}_${model}_num_models_${num_models}_${data_dist}_${random_seed}.txt"
 
             # Print current command
-            echo "python -u -m train --dataset=${dataset} --arch=${arch} --num_models=${num_models} --data_dist=${data_dist} --random_seed=${random_seed} --num_epochs=${num_epochs} > ${output_filename}"
+            echo "python -u -m train --dataset=${dataset} --model=${model} --num_models=${num_models} --data_dist=${data_dist} --random_seed=${random_seed} --epochs=${epochs} > ${output_filename}"
 
             # Add " --run_python true " to the command after checking the printed experiment list
             if [ "$run_python" = true ]; then
               # Run the Python script with the specified arguments
-              python -u -m train --dataset="$dataset" --arch="$arch" --num_models="$num_models" --data_dist="$data_dist" --seed="$random_seed" --num_epochs="$num_epochs" 2>&1 | tee "$output_filename" &
+              python -u -m train --dataset="$dataset" --model="$model" --num_models="$num_models" --data_dist="$data_dist" --seed="$random_seed" --epochs="$epochs" 2>&1 | tee "$output_filename" &
             fi
 
             # Increment the parallel scripts counter
