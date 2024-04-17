@@ -4,7 +4,7 @@ import models
 import data
 import random
 import json
-from collaborative import Collab
+from utils.collaborative import Collab
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F

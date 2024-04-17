@@ -121,7 +121,7 @@ def main():
     '''
     Topologies = [FullyConnectedTopology, RingTopology, BiparTopology, DisTopology] # Add BiparTopology when defined
     Topologies_name = ['FC', 'Ring', 'Bipar', 'Dis'] # Add BiparTopology when defined
-    agent_num_list = [i for i in range(2, 11)]
+    agent_num_list = [i for i in range(2, 20)]
     agent_num_list.append(5)
     for num_agents in agent_num_list:
         for eid, topology in enumerate(Topologies):
@@ -132,7 +132,7 @@ def main():
             cdict['num_agents'] = int(num_agents)
             cdict['connectivity'] = connectivity
             cdict['pi'] = pi.tolist()
-            with open('con/%s_%s.json'%(num_agents, eid+1), 'w') as f:
+            with open('../Connectivity/%s_%s.json'%(num_agents, eid+1), 'w') as f:
                 json.dump(cdict, f, sort_keys=False, indent=4)
 
 if __name__ == '__main__':

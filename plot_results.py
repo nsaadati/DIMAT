@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import argparse
 
 # Command formatting is a little different than for the shell script, an example is below
-# python plot_results.py --nums_models 10 20 --data_dists iid --datasets "cifar100" --archs resnet20 --nums_epochs 2 --matching_algs nonseq_match_permute --merg_itrs 30 --name num_models
+# python plot_results.py --nums_models 10 20 --data_dists iid --datasets "cifar100" --archs resnet20 --nums_epochs 2 --matching_algs DIMAT --merg_itrs 30 --name num_models
 
 # Add argparse for input arguments
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -18,7 +18,7 @@ parser.add_argument('--nums_epochs', nargs='+', type=int, default=[2, 5, 10, 20]
 parser.add_argument('--init_epochs', type=int, default=100)
 parser.add_argument("--plot_init", action="store_true")
 parser.add_argument('--merg_itrs', nargs='+', type=int, default=[100])
-parser.add_argument('--matching_algs', nargs='+', type=str, default=["nonseq_match_permute", "consensus_averaging",  "SGP", "CDSGD", "modified_consensus_weight_matching"])
+parser.add_argument('--matching_algs', nargs='+', type=str, default=["DIMAT", "WA",  "SGP", "CDSGD", "WM"])
 parser.add_argument('--exps_list', nargs='+', type=int, default=[1])
 parser.add_argument('--datasets', nargs='+', type=str, default=["cifar100", "tinyimgnt", "cifar10"])
 parser.add_argument('--archs', nargs='+', type=str, default=['resnet20', 'resnet50', 'vgg16'])
@@ -35,11 +35,11 @@ merg_itrs_list = range(1, args.merg_itrs[0]+1)
 archs = args.archs
 matching_algs_list = args.matching_algs
 if "resnet20" in archs:
-    if "modified_consensus_weight_matching" in matching_algs_list:
-        matching_algs_list.remove("modified_consensus_weight_matching")
+    if "WM" in matching_algs_list:
+        matching_algs_list.remove("WM")
 if "resnet50" in archs:
-    if "modified_consensus_weight_matching" in matching_algs_list:
-        matching_algs_list.remove("modified_consensus_weight_matching")
+    if "WM" in matching_algs_list:
+        matching_algs_list.remove("WM")
 exps_list = args.exps_list
 datasets = args.datasets
 nums_models = args.nums_models
@@ -58,17 +58,17 @@ single_value_vars = [arg for arg in vars(args) if isinstance(getattr(args, arg),
 exp_names = {1: "Fully Connected", 2: "Ring", 3: "Bipar"}
 exp_names_N = {1: "FC", 2: "R", 3: "B"}
 matching_alg_names = {
-    "nonseq_match_permute": "DIMAT",
-    "consensus_averaging": "WA",
-    "modified_consensus_weight_matching": "WM",
+    "DIMAT": "DIMAT",
+    "WA": "WA",
+    "WM": "WM",
     "SGP": "SGP",
     "CGA": "CGA",
     "CDSGD":"CDSGD"
 }
 matching_alg_names_N = {
-    "nonseq_match_permute": "DIMAT",
-    "consensus_averaging": "WA",
-    "modified_consensus_weight_matching": "WM",
+    "DIMAT": "DIMAT",
+    "WA": "WA",
+    "WM": "WM",
     "SGP": "SGP",
     "CGA": "CGA",
     "CDSGD":"CDSGD"
