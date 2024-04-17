@@ -82,7 +82,7 @@ Please cite our paper in your publications if it helps your resemodel:
 
 ## Paper Links
 [DIMAT: Decentralized Iterative Merging-And-Training
-for Deep Learning Models]([paper_link](https://arxiv.org/abs/2404.08079))
+for Deep Learning Models]([(https://arxiv.org/abs/2404.08079)])
 
 
 ## Contributors
