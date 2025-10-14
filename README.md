@@ -1,5 +1,6 @@
-# DIMAT: Decentralized Iterative Merging-And-Training for Deep Learning Models
-[DIMAT](https://arxiv.org/abs/2404.08079) is a decentralized deep learning framework that reduces communication and computation overhead in large-scale models. Agents train locally and merge models using activation matching, achieving faster convergence and higher accuracy with lower overhead. Empirical results show DIMAT's effectiveness across various tasks, making it ideal for real-world decentralized learning.
+# DIMAT: Decentralized Iterative Merging and Training for Deep Learning Models (CVPR 2024)
+
+[DIMAT](https://arxiv.org/abs/2404.08079) is a decentralized deep learning framework designed to minimize communication and computational overhead in large-scale models. In this approach, agents train locally and merge their models through activation matching. This method results in faster convergence and increased accuracy while maintaining lower overhead. Empirical results demonstrate the effectiveness of DIMAT across various tasks, making it particularly suitable for real-world decentralized learning. DIMAT was published at CVPR 2024.
 ## Install
 Clone repo and install environment.yml and requirements.txt
 ~~~
